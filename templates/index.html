@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPT讲稿AI生成系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body>
+    <div class="main-container">
+        <!-- 统一的顶部信息区 -->
+        <header class="app-header">
+            <h1>PPT讲稿AI生成系统</h1>
+            <p class="subtitle">基于多模态大模型的智能演示文稿讲稿生成与增强平台</p>
+            <div class="header-controls">
+                <button id="settings-btn" class="icon-btn" title="设置">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </header>
+
+        <main class="content-wrapper">
+            <!-- 顶部三卡片功能介绍 -->
+            <section class="feature-cards">
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-file-arrow-up"></i></div>
+                    <h3>PPT上传</h3>
+                    <p>支持 .pptx 格式的演示文稿上传</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-robot"></i></div>
+                    <h3>AI智能生成</h3>
+                    <p>结合上下文与多模态内容，生成连贯讲稿</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-file-arrow-down"></i></div>
+                    <h3>一键下载</h3>
+                    <p>讲稿直接嵌入PPT备注，方便快捷</p>
+                </div>
+            </section>
+
+            <!-- 核心操作面板 -->
+            <section id="upload-panel" class="upload-panel visible">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="flashes">
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                <form action="/process" method="post" enctype="multipart/form-data" id="upload-form">
+                    <div class="form-step">
+                        <label class="form-label">1. 选择PPTX文件</label>
+                        <label for="ppt_file" class="file-input-label">
+                            <input type="file" name="ppt_file" id="ppt_file" class="file-input" accept=".pptx" required>
+                            <span class="file-browse-btn">选择文件</span>
+                            <span class="file-name-display">未选择任何文件</span>
+                        </label>
+                    </div>
+                    <div class="form-step">
+                        <label for="duration_select" class="form-label">2. 选择讲稿总时长</label>
+                        <div class="duration-control-wrapper">
+                            <select id="duration_select" class="styled-select">
+                                <option value="10">10 分钟 (微课)</option>
+                                <option value="15">15 分钟 (短分享)</option>
+                                <option value="30">30 分钟</option>
+                                <option value="45">45 分钟 (标准课)</option>
+                                <option value="60" selected>60 分钟</option>
+                                <option value="90">90 分钟 (讲座)</option>
+                                <option value="custom">自定义时长...</option>
+                            </select>
+                            <input type="number" id="duration_custom" class="custom-duration-input hidden"
+                                placeholder="分钟" min="1" max="180">
+                        </div>
+                        <input type="hidden" name="duration" id="duration_hidden_input" value="60">
+                    </div>
+
+                    <!-- 模型选择已改为全局服务器端配置，此处不再提交隐藏字段 -->
+                    <!-- <input type="hidden" name="llm_provider" value="ollama_gemma2"> -->
+
+                    <button type="submit" class="submit-btn">
+                        <i class="fas fa-paper-plane"></i> 生成并跳转至预览页
+                    </button>
+                </form>
+
+                <div id="loading" class="loading-indicator hidden">
+                    <div class="spinner"></div>
+                    <p>AI正在奋笔疾书中，请稍候... (这可能需要几分钟时间)</p>
+                </div>
+            </section>
+
+            <!-- 管理员密码验证模态框 -->
+            <div id="password-modal" class="modal hidden">
+                <div class="modal-content" style="max-width: 400px;">
+                    <span class="close-modal" onclick="closePasswordModal()">&times;</span>
+                    <h2>管理员验证</h2>
+                    <p style="margin-bottom: 20px; color: #666;">请输入管理员密码以访问设置</p>
+
+                    <div class="password-input-group">
+                        <input type="password" id="admin-password" placeholder="请输入密码" class="password-input"
+                            autocomplete="off">
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility()"
+                            title="显示/隐藏密码">
+                            <i class="fas fa-eye" id="eye-icon"></i>
+                        </button>
+                    </div>
+
+                    <div id="password-error" class="password-error hidden"></div>
+
+                    <div class="modal-actions">
+                        <button id="cancel-password-btn" class="secondary-btn"
+                            onclick="closePasswordModal()">取消</button>
+                        <button id="verify-password-btn" class="primary-btn">验证</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 设置模态框 -->
+            <div id="settings-modal" class="modal hidden">
+                <div class="modal-content">
+                    <span class="close-modal">&times;</span>
+                    <h2>系统设置</h2>
+
+                    <div class="setting-item">
+                        <h3>选择 AI 模型</h3>
+                        <div class="model-options">
+                            <label class="model-option">
+                                <input type="radio" name="model_choice" value="ollama_gemma2" checked>
+                                <span class="model-label">
+                                    <strong>Ollama (Gemma 4 31B)</strong>
+                                    <small>本地模型，无需联网，速度快</small>
+                                </span>
+                                <button type="button" class="test-model-btn" data-model="ollama_gemma2"
+                                    onclick="testModel('ollama_gemma2')">
+                                    <i class="fas fa-plug"></i> 测试
+                                </button>
+                            </label>
+
+                            <label class="model-option">
+                                <input type="radio" name="model_choice" value="gemini">
+                                <span class="model-label">
+                                    <strong>Google Gemini (Flash Preview)</strong>
+                                    <small>多模态能力强</small>
+                                </span>
+                                <button type="button" class="test-model-btn" data-model="gemini"
+                                    onclick="testModel('gemini')">
+                                    <i class="fas fa-plug"></i> 测试
+                                </button>
+                            </label>
+
+                            <label class="model-option">
+                                <input type="radio" name="model_choice" value="deepseek">
+                                <span class="model-label">
+                                    <strong>DeepSeek (Chat)</strong>
+                                    <small>国产之光，文本逻辑强</small>
+                                </span>
+                                <button type="button" class="test-model-btn" data-model="deepseek"
+                                    onclick="testModel('deepseek')">
+                                    <i class="fas fa-plug"></i> 测试
+                                </button>
+                            </label>
+
+                            <label class="model-option">
+                                <input type="radio" name="model_choice" value="qwen">
+                                <span class="model-label">
+                                    <strong>阿里通义千问 (Qwen Max)</strong>
+                                    <small>中文理解能力卓越</small>
+                                </span>
+                                <button type="button" class="test-model-btn" data-model="qwen"
+                                    onclick="testModel('qwen')">
+                                    <i class="fas fa-plug"></i> 测试
+                                </button>
+                            </label>
+
+                            <label class="model-option">
+                                <input type="radio" name="model_choice" value="vllm">
+                                <span class="model-label">
+                                    <strong>vLLM (OpenAI Compatible)</strong>
+                                    <small>本地高性能推理后端</small>
+                                </span>
+                                <button type="button" class="test-model-btn" data-model="vllm"
+                                    onclick="testModel('vllm')">
+                                    <i class="fas fa-plug"></i> 测试
+                                </button>
+                            </label>
+                        </div>
+
+                        <!-- 测试结果显示区域 -->
+                        <div id="test-result" class="test-result hidden">
+                            <div class="test-result-header">
+                                <i class="fas fa-info-circle"></i>
+                                <span id="test-result-title">测试结果</span>
+                            </div>
+                            <div id="test-result-content" class="test-result-content"></div>
+                        </div>
+                    </div>
+
+                    <!-- 高级配置区域 -->
+                    <div class="setting-item"
+                        style="margin-top: 24px; border-top: 1px solid #e0e0e0; padding-top: 24px;">
+                        <h3 style="display: flex; align-items: center; justify-content: space-between;">
+                            <span>高级配置</span>
+                            <button type="button" class="toggle-config-btn" onclick="toggleAdvancedConfig()"
+                                id="toggle-config-btn">
+                                <i class="fas fa-chevron-down"></i> 展开
+                            </button>
+                        </h3>
+
+                        <div id="advanced-config-panel" class="hidden" style="margin-top: 16px;">
+                            <!-- API密钥配置 -->
+                            <div class="config-section">
+                                <h4><i class="fas fa-key"></i> API 密钥配置</h4>
+                                <div class="config-group">
+                                    <label>
+                                        <strong>Google Gemini API Key</strong>
+                                        <input type="password" id="gemini-api-key" class="config-input"
+                                            placeholder="AIza...">
+                                    </label>
+                                    <small style="color: #666;">用于 Gemini 多模态模型</small>
+                                </div>
+                                <div class="config-group">
+                                    <label>
+                                        <strong>DeepSeek API Key</strong>
+                                        <input type="password" id="deepseek-api-key" class="config-input"
+                                            placeholder="sk-...">
+                                    </label>
+                                    <small style="color: #666;">用于 DeepSeek 文本模型</small>
+                                </div>
+                                <div class="config-group">
+                                    <label>
+                                        <strong>阿里通义千问 API Key</strong>
+                                        <input type="password" id="qwen-api-key" class="config-input"
+                                            placeholder="sk-...">
+                                    </label>
+                                    <small style="color: #666;">用于 Qwen 中文模型</small>
+                                </div>
+                            </div>
+
+                            <!-- 模型配置 -->
+                            <div class="config-section">
+                                <h4><i class="fas fa-cog"></i> 模型配置</h4>
+                                <div class="config-group">
+                                    <label>
+                                        <strong>Gemini 模型名称</strong>
+                                        <input type="text" id="gemini-model" class="config-input"
+                                            placeholder="gemini-3-flash-preview">
+                                    </label>
+                                </div>
+                                <div class="config-group">
+                                    <label>
+                                        <strong>DeepSeek 模型名称</strong>
+                                        <input type="text" id="deepseek-model" class="config-input"
+                                            placeholder="deepseek-chat">
+                                    </label>
+                                </div>
+                                <div class="config-group">
+                                    <label>
+                                        <strong>Qwen 模型名称</strong>
+                                        <input type="text" id="qwen-model" class="config-input" placeholder="qwen-max">
+                                    </label>
+                                </div>
+                                <div class="config-group">
+                                    <label>
+                                        <strong>Ollama 模型名称</strong>
+                                        <input type="text" id="ollama-model" class="config-input"
+                                            placeholder="gemma4:31b">
+                                    </label>
+                                </div>
+                                <div class="config-group">
+                                    <label>
+                                        <strong>vLLM 模型名称</strong>
+                                        <input type="text" id="vllm-model" class="config-input"
+                                            placeholder="gemma-4-moe">
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- 服务地址配置 -->
+                            <div class="config-section">
+                                <h4><i class="fas fa-server"></i> 服务地址配置</h4>
+                                <div class="config-group">
+                                    <label>
+                                        <strong>Ollama 服务地址</strong>
+                                        <input type="text" id="ollama-base-url" class="config-input"
+                                            placeholder="http://10.255.1.103:11434/v1">
+                                    </label>
+                                    <small style="color: #666;">本地 Ollama 服务的 API 地址</small>
+                                </div>
+                                <div class="config-group">
+                                    <label>
+                                        <strong>vLLM 服务地址</strong>
+                                        <input type="text" id="vllm-base-url" class="config-input"
+                                            placeholder="http://10.255.1.118:8000/v1">
+                                    </label>
+                                    <small style="color: #666;">本地 vLLM 服务的 API 地址</small>
+                                </div>
+                            </div>
+
+                            <div class="config-actions">
+                                <button type="button" class="secondary-btn" onclick="loadAdvancedConfig()">
+                                    <i class="fas fa-sync"></i> 重新加载
+                                </button>
+                                <button type="button" class="primary-btn" onclick="saveAdvancedConfig()">
+                                    <i class="fas fa-save"></i> 保存配置
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button id="test-all-models-btn" class="secondary-btn">
+                            <i class="fas fa-vial"></i> 测试所有模型
+                        </button>
+                        <button id="save-settings-btn" class="primary-btn">保存设置</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="app-footer">
+            <p class="powered-by">由 Gemini, DeepSeek & Ollama 强力驱动</p>
+        </footer>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('ppt_file');
+        const fileNameDisplay = document.querySelector('.file-name-display');
+        const uploadForm = document.getElementById('upload-form');
+
+        // 使用label后，不再需要JS来触发点击
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                fileNameDisplay.textContent = fileInput.files[0].name;
+                fileNameDisplay.classList.add('selected');
+            } else {
+                fileNameDisplay.textContent = '未选择任何文件';
+                fileNameDisplay.classList.remove('selected');
+            }
+        });
+
+        const durationSelect = document.getElementById('duration_select');
+        const durationCustom = document.getElementById('duration_custom');
+        const durationHiddenInput = document.getElementById('duration_hidden_input');
+
+        durationSelect.addEventListener('change', function () {
+            if (this.value === 'custom') {
+                durationCustom.classList.remove('hidden');
+                durationCustom.focus();
+                durationHiddenInput.value = '';
+                durationCustom.required = true;
+            } else {
+                durationCustom.classList.add('hidden');
+                durationHiddenInput.value = this.value;
+                durationCustom.required = false;
+            }
+        });
+
+        durationCustom.addEventListener('input', function () {
+            durationHiddenInput.value = this.value;
+        });
+
+        uploadForm.addEventListener('submit', function (event) {
+            if (fileInput.files.length === 0) {
+                event.preventDefault();
+                alert('请先选择一个PPTX文件！');
+                return;
+            }
+            if (durationSelect.value === 'custom') {
+                const customValue = parseInt(durationCustom.value);
+                if (!customValue || customValue <= 0 || customValue > 180) {
+                    event.preventDefault();
+                    alert('请输入一个有效的自定义时长（1到180分钟之间）！');
+                    durationCustom.focus();
+                    return;
+                }
+            }
+            this.classList.add('hidden');
+            document.getElementById('loading').classList.remove('hidden');
+        });
+
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsModal = document.getElementById('settings-modal');
+        const closeModalBtn = settingsModal.querySelector('.close-modal');
+        const saveSettingsBtn = document.getElementById('save-settings-btn');
+        // const hiddenProviderInput = document.querySelector('input[name="llm_provider"]'); // 已移除
+        const modelRadios = document.querySelectorAll('input[name="model_choice"]');
+
+        // 加载当前全局配置
+        async function loadGlobalSettings() {
+            try {
+                const response = await fetch('/api/settings');
+                const data = await response.json();
+                const currentProvider = data.llm_provider;
+
+                modelRadios.forEach(radio => {
+                    radio.checked = (radio.value === currentProvider);
+                });
+                return currentProvider;
+            } catch (e) {
+                console.error("无法加载配置", e);
+            }
+        }
+
+        // 页面加载时获取一次配置
+        loadGlobalSettings();
+
+        // 修改后的点击处理：使用密码模态框
+        settingsBtn.onclick = () => {
+            // 打开密码验证模态框
+            document.getElementById('password-modal').classList.remove('hidden');
+            document.getElementById('admin-password').value = '';
+            document.getElementById('password-error').classList.add('hidden');
+            document.getElementById('admin-password').focus();
+        };
+
+        // 关闭密码模态框
+        function closePasswordModal() {
+            document.getElementById('password-modal').classList.add('hidden');
+            document.getElementById('admin-password').value = '';
+        }
+
+        // 切换密码显示/隐藏
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('admin-password');
+            const eyeIcon = document.getElementById('eye-icon');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.classList.remove('fa-eye');
+                eyeIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.classList.remove('fa-eye-slash');
+                eyeIcon.classList.add('fa-eye');
+            }
+        }
+
+        // 密码模态框 - 验证按钮
+        document.getElementById('verify-password-btn').onclick = async () => {
+            const passwordInput = document.getElementById('admin-password');
+            const password = passwordInput.value;
+            const errorDiv = document.getElementById('password-error');
+            const verifyBtn = document.getElementById('verify-password-btn');
+
+            if (!password) {
+                errorDiv.textContent = '请输入密码';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            // 禁用按钮，防止重复提交
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = '验证中...';
+
+            try {
+                const response = await fetch('/api/verify-admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: password })
+                });
+
+                if (response.ok) {
+                    // 密码验证成功
+                    closePasswordModal();
+                    await loadGlobalSettings();
+                    settingsModal.classList.remove('hidden');
+                } else {
+                    const data = await response.json();
+                    errorDiv.textContent = data.message || '密码错误，访问被拒绝';
+                    errorDiv.classList.remove('hidden');
+                    passwordInput.value = '';
+                    passwordInput.focus();
+                }
+            } catch (error) {
+                console.error('验证请求失败:', error);
+                errorDiv.textContent = '网络错误，无法验证密码';
+                errorDiv.classList.remove('hidden');
+            } finally {
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = '验证';
+            }
+        };
+
+        // 密码输入框 - 回车键提交
+        document.getElementById('admin-password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('verify-password-btn').click();
+            }
+        });
+
+        closeModalBtn.addEventListener('click', () => {
+            settingsModal.classList.add('hidden');
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === settingsModal) {
+                settingsModal.classList.add('hidden');
+            }
+        });
+
+        saveSettingsBtn.addEventListener('click', async () => {
+            let selectedValue = 'ollama_gemma2';
+            modelRadios.forEach(radio => {
+                if (radio.checked) {
+                    selectedValue = radio.value;
+                }
+            });
+
+            // 发送请求更新服务器全局配置
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ llm_provider: selectedValue })
+                });
+
+                if (response.ok) {
+                    settingsModal.classList.add('hidden');
+                    const modelNameMap = {
+                        'ollama_gemma2': 'Ollama (Gemma 4 31B)',
+                        'gemini': 'Google Gemini (Flash Preview)',
+                        'deepseek': 'DeepSeek (Chat)',
+                        'qwen': '阿里通义千问 (Qwen Max)',
+                        'vllm': 'vLLM (OpenAI Compatible)'
+                    };
+                    alert(`全局设置已保存。\n当前所有任务将使用模型：${modelNameMap[selectedValue]}`);
+                } else {
+                    alert('设置保存失败，请检查服务器日志。');
+                }
+            } catch (e) {
+                alert('网络错误，无法保存设置。');
+            }
+        });
+
+        // ========== AI模型测试功能 ==========
+
+        const modelNames = {
+            'ollama_gemma2': 'Ollama (Gemma 4 31B)',
+            'gemini': 'Google Gemini (Flash Preview)',
+            'deepseek': 'DeepSeek (Chat)',
+            'qwen': '阿里通义千问 (Qwen Max)',
+            'vllm': 'vLLM (OpenAI Compatible)'
+        };
+
+        // 测试单个模型
+        async function testModel(modelName) {
+            const testResultDiv = document.getElementById('test-result');
+            const resultContent = document.getElementById('test-result-content');
+            const resultTitle = document.getElementById('test-result-title');
+
+            // 显示测试结果区域
+            testResultDiv.classList.remove('hidden');
+            resultTitle.textContent = `正在测试 ${modelNames[modelName]}...`;
+            resultContent.innerHTML = '<div class="loading-spinner"></div><p>正在连接服务器，请稍候...</p>';
+
+            try {
+                const response = await fetch('/api/test-model', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: modelName })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    resultTitle.innerHTML = `<i class="fas fa-check-circle success"></i> ${modelNames[modelName]} 测试成功`;
+                    resultContent.innerHTML = `
+                        <div class="test-success">
+                            <p><strong>✅ 连接状态:</strong> 可用</p>
+                            <p><strong>⏱️ 响应时间:</strong> ${data.response_time || 'N/A'}</p>
+                            ${data.details ? `<p><strong>📋 详情:</strong> ${data.details}</p>` : ''}
+                        </div>
+                    `;
+                } else {
+                    resultTitle.innerHTML = `<i class="fas fa-times-circle error"></i> ${modelNames[modelName]} 测试失败`;
+                    resultContent.innerHTML = `
+                        <div class="test-error">
+                            <p><strong>❌ 错误信息:</strong> ${data.message || '未知错误'}</p>
+                            <p><strong>💡 建议:</strong> ${data.suggestion || '请检查网络连接和API密钥配置'}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultTitle.innerHTML = `<i class="fas fa-exclamation-triangle error"></i> 测试请求失败`;
+                resultContent.innerHTML = `
+                    <div class="test-error">
+                        <p><strong>❌ 网络错误:</strong> 无法连接到服务器</p>
+                        <p><strong>💡 建议:</strong> 请检查服务器是否正常运行</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 测试所有模型
+        document.getElementById('test-all-models-btn').addEventListener('click', async () => {
+            const testResultDiv = document.getElementById('test-result');
+            const resultContent = document.getElementById('test-result-content');
+            const resultTitle = document.getElementById('test-result-title');
+
+            testResultDiv.classList.remove('hidden');
+            resultTitle.textContent = '正在测试所有模型...';
+            resultContent.innerHTML = '<div class="loading-spinner"></div><p>正在逐个测试模型，请稍候...</p>';
+
+            const models = ['ollama_gemma2', 'gemini', 'deepseek', 'qwen', 'vllm'];
+            let results = [];
+
+            for (const model of models) {
+                try {
+                    const response = await fetch('/api/test-model', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ model: model })
+                    });
+                    const data = await response.json();
+                    results.push({
+                        model: model,
+                        name: modelNames[model],
+                        success: data.status === 'success',
+                        message: data.message,
+                        responseTime: data.response_time
+                    });
+                } catch (error) {
+                    results.push({
+                        model: model,
+                        name: modelNames[model],
+                        success: false,
+                        message: '网络错误'
+                    });
+                }
+            }
+
+            // 显示所有结果
+            let html = '<div class="all-test-results">';
+            results.forEach(r => {
+                const statusIcon = r.success ? '✅' : '❌';
+                const statusClass = r.success ? 'success' : 'error';
+                html += `
+                    <div class="test-item ${statusClass}">
+                        <span class="test-item-name">${statusIcon} ${r.name}</span>
+                        <span class="test-item-status">
+                            ${r.success ? '可用' : r.message}
+                            ${r.responseTime ? ` (${r.responseTime})` : ''}
+                        </span>
+                    </div>
+                `;
+            });
+            html += '</div>';
+
+            resultTitle.textContent = '所有模型测试完成';
+            resultContent.innerHTML = html;
+        });
+
+        // ========== 高级配置管理功能 ==========
+
+        // 切换高级配置面板显示/隐藏
+        function toggleAdvancedConfig() {
+            const panel = document.getElementById('advanced-config-panel');
+            const btn = document.getElementById('toggle-config-btn');
+            const isHidden = panel.classList.contains('hidden');
+
+            if (isHidden) {
+                panel.classList.remove('hidden');
+                btn.innerHTML = '<i class="fas fa-chevron-up"></i> 收起';
+                // 首次展开时加载配置
+                if (!panel.hasAttribute('data-loaded')) {
+                    loadAdvancedConfig();
+                    panel.setAttribute('data-loaded', 'true');
+                }
+            } else {
+                panel.classList.add('hidden');
+                btn.innerHTML = '<i class="fas fa-chevron-down"></i> 展开';
+            }
+        }
+
+        // 加载高级配置
+        async function loadAdvancedConfig() {
+            try {
+                const response = await fetch('/api/advanced-config');
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    // 填充API密钥（已脱敏）
+                    document.getElementById('gemini-api-key').value = data.api_keys.gemini_api_key || '';
+                    document.getElementById('deepseek-api-key').value = data.api_keys.deepseek_api_key || '';
+                    document.getElementById('qwen-api-key').value = data.api_keys.qwen_api_key || '';
+
+                    // 填充模型配置
+                    document.getElementById('gemini-model').value = data.model_config.gemini_model || '';
+                    document.getElementById('deepseek-model').value = data.model_config.deepseek_model || '';
+                    document.getElementById('qwen-model').value = data.model_config.qwen_model || '';
+                    document.getElementById('ollama-model').value = data.model_config.ollama_model || '';
+                    document.getElementById('vllm-model').value = data.model_config.vllm_model || '';
+
+                    // 填充服务地址
+                    document.getElementById('ollama-base-url').value = data.model_config.ollama_base_url || '';
+                    document.getElementById('vllm-base-url').value = data.model_config.vllm_base_url || '';
+                } else {
+                    alert('加载配置失败: ' + data.message);
+                }
+            } catch (error) {
+                console.error('加载配置失败:', error);
+                alert('加载配置失败，请检查网络连接');
+            }
+        }
+
+        // 保存高级配置
+        async function saveAdvancedConfig() {
+            const apiKeys = {
+                gemini_api_key: document.getElementById('gemini-api-key').value,
+                deepseek_api_key: document.getElementById('deepseek-api-key').value,
+                qwen_api_key: document.getElementById('qwen-api-key').value
+            };
+
+            const modelConfig = {
+                gemini_model: document.getElementById('gemini-model').value,
+                deepseek_model: document.getElementById('deepseek-model').value,
+                qwen_model: document.getElementById('qwen-model').value,
+                ollama_model: document.getElementById('ollama-model').value,
+                vllm_model: document.getElementById('vllm-model').value,
+                ollama_base_url: document.getElementById('ollama-base-url').value,
+                vllm_base_url: document.getElementById('vllm-base-url').value
+            };
+
+            // 验证输入
+            if (!apiKeys.gemini_api_key && !apiKeys.deepseek_api_key && !apiKeys.qwen_api_key) {
+                alert('请至少配置一个API密钥');
+                return;
+            }
+
+            try {
+                // 保存API密钥
+                if (apiKeys.gemini_api_key || apiKeys.deepseek_api_key || apiKeys.qwen_api_key) {
+                    const keysResponse = await fetch('/api/advanced-config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            type: 'api_keys',
+                            keys: apiKeys
+                        })
+                    });
+
+                    const keysData = await keysResponse.json();
+                    if (!keysResponse.ok || keysData.status !== 'success') {
+                        alert('保存API密钥失败: ' + (keysData.message || '未知错误'));
+                        return;
+                    }
+                }
+
+                // 保存模型配置
+                const configResponse = await fetch('/api/advanced-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'model_config',
+                        config: modelConfig
+                    })
+                });
+
+                const configData = await configResponse.json();
+                if (!configResponse.ok || configData.status !== 'success') {
+                    alert('保存模型配置失败: ' + (configData.message || '未知错误'));
+                    return;
+                }
+
+                alert('✅ 配置保存成功！\n\n部分配置可能需要重启服务后生效。');
+
+            } catch (error) {
+                console.error('保存配置失败:', error);
+                alert('保存配置失败，请检查网络连接');
+            }
+        }
+        // ========== 前端监控采集 ==========
+        (function () {
+            // 发送日志到后端的通用函数
+            function sendClientLog(type, category, message, details = {}) {
+                fetch('/api/client-log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type, category, message, details })
+                }).catch(e => console.error("日志采集发送失败", e));
+            }
+
+            // 1. 全局错误监听
+            window.addEventListener('error', function (event) {
+                sendClientLog('error', 'js_error', event.message, {
+                    source: event.filename,
+                    lineno: event.lineno,
+                    colno: event.colno,
+                    error: event.error ? event.error.stack : null
+                });
+            });
+
+            // 2. Promise未处理异常
+            window.addEventListener('unhandledrejection', function (event) {
+                let reason = event.reason;
+                sendClientLog('error', 'promise_reject', 'Unhandled Promise Rejection', {
+                    reason: reason ? (reason.stack || reason) : 'Unknown reason'
+                });
+            });
+
+            // 3. 页面访问监控 (性能)
+            window.addEventListener('load', function () {
+                // 在现代浏览器中，使用 PerformanceNavigationTiming
+                let perfData = window.performance.getEntriesByType("navigation")[0];
+                if (perfData) {
+                    sendClientLog('perf', 'page_load', '首页加载性能', {
+                        loadTime: Math.round(perfData.loadEventEnd),
+                        domReadyTime: Math.round(perfData.domContentLoadedEventEnd)
+                    });
+                }
+            });
+
+            // 4. 业务数据采集：上传按钮点击和PPT配置
+            const form = document.getElementById('upload-form');
+            if (form) {
+                form.addEventListener('submit', function () {
+                    const fileInput = document.getElementById('ppt_file');
+                    const durationInput = document.getElementById('duration_hidden_input');
+                    let fileDetails = {};
+                    if (fileInput && fileInput.files.length > 0) {
+                        const file = fileInput.files[0];
+                        fileDetails = {
+                            name: file.name,
+                            size_bytes: file.size,
+                            type: file.type
+                        };
+                    }
+                    sendClientLog('biz', 'ppt_upload', '用户发起讲稿生成任务', {
+                        file: fileDetails,
+                        duration_minutes: durationInput ? durationInput.value : 60
+                    });
+                });
+            }
+        })();
+    </script>
+</body>
+
+</html>

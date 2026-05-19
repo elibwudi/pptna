@@ -1,0 +1,18 @@
+{
+    "llm_provider": "vllm",
+    "generation_mode": "two_stage",
+    "two_stage_config": {
+        "enabled": true,
+        "min_slides_for_two_stage": 3,
+        "max_slides_for_full_analysis": 50,
+        "max_chars_per_slide": 200,
+        "max_terms_in_glossary": 30
+    },
+    "gemini_model": "gemini-3-flash-preview",
+    "deepseek_model": "deepseek-chat",
+    "qwen_model": "qwen-max",
+    "ollama_model": "gemma4:31b",
+    "ollama_base_url": "http://10.255.1.103:11434/v1",
+    "vllm_model": "gemma-4-moe",
+    "vllm_base_url": "http://10.255.1.118:8000/v1"
+}

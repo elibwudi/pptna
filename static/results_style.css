@@ -1,0 +1,268 @@
+/* --- results_style.css --- */
+/* --- 专门为结果页面设计的样式 --- */
+
+/* --- 全局样式和变量 --- */
+:root {
+    --primary-color: #007BFF;
+    --primary-hover-color: #0056b3;
+    --light-bg-color: #f8f9fa;
+    --card-bg-color: #ffffff;
+    --text-color: #343a40;
+    --text-light-color: #6c757d;
+    --border-color: #dee2e6;
+    --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    background-color: var(--light-bg-color);
+    /* 结果页背景设为浅灰色 */
+    color: var(--text-color);
+}
+
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* --- 通用头部和尾部 --- */
+.main-header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 1rem 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+}
+
+.logo i {
+    font-size: 1.8rem;
+    margin-right: 12px;
+}
+
+.logo h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.main-footer {
+    text-align: center;
+    padding: 2rem 0;
+    color: var(--text-light-color);
+    border-top: 1px solid var(--border-color);
+    background-color: var(--card-bg-color);
+}
+
+/* --- 结果页面独有样式 --- */
+.result-container {
+    padding: 40px 20px;
+}
+
+.section-title {
+    text-align: center;
+    font-size: 2.2rem;
+    margin-bottom: 50px;
+    font-weight: 700;
+}
+
+.status-container {
+    margin-bottom: 50px;
+}
+
+.loading-indicator {
+    text-align: center;
+    color: var(--text-light-color);
+    padding: 20px;
+}
+
+.spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border-left-color: var(--primary-color);
+    animation: spin 1s ease infinite;
+    margin: 0 auto 10px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.hidden {
+    display: none;
+}
+
+.alert {
+    padding: 15px;
+    border-radius: 8px;
+    color: #fff;
+    text-align: center;
+}
+
+.alert-error {
+    background-color: #d93025;
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 20px;
+    background: var(--card-bg-color);
+    border-radius: 12px;
+    position: sticky;
+    top: 80px;
+    z-index: 900;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 25px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.action-btn i {
+    font-size: 1.1rem;
+}
+
+.download-ppt {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.download-ppt:hover {
+    background-color: var(--primary-hover-color);
+    transform: translateY(-2px);
+}
+
+.download-txt {
+    background-color: #198754;
+    color: white;
+}
+
+.download-txt:hover {
+    background-color: #157347;
+    transform: translateY(-2px);
+}
+
+.return-home {
+    background-color: var(--card-bg-color);
+    color: var(--text-light-color);
+    border: 2px solid var(--border-color);
+}
+
+.return-home:hover {
+    background-color: var(--light-bg-color);
+    border-color: var(--text-light-color);
+}
+
+.results-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+.slide-result-row {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 30px;
+    background: var(--card-bg-color);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: var(--box-shadow);
+    border: 1px solid var(--border-color);
+}
+
+.slide-image-container {
+    position: relative;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #e9ecef;
+}
+
+.slide-image-container img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.slide-number-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 5px 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 20px;
+}
+
+.slide-notes-container h3 {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.notes-content {
+    background: var(--light-bg-color);
+    padding: 20px;
+    border-radius: 8px;
+    height: 100%;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.notes-content p {
+    white-space: pre-wrap;
+    font-size: 1.05rem;
+    line-height: 1.8;
+}
+
+@media (max-width: 992px) {
+    .slide-result-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .action-btn {
+        justify-content: center;
+    }
+}

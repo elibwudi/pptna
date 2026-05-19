@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(powershell:*)",
+      "Bash(python:*)",
+      "Bash(ls:*)",
+      "Bash(py:*)",
+      "Bash(where:*)",
+      "Bash(\"C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Microsoft\\\\WindowsApps\\\\python.exe\" --version)",
+      "Bash(\"C:\\\\Users\\\\admin\\\\.conda\\\\envs\\\\ppt_env\\\\python.exe\":*)",
+      "Bash(\"C:\\\\Users\\\\admin\\\\.conda\\\\envs\\\\ppt_env\\\\python.exe\" run.py)",
+      "Bash(timeout:*)"
+    ]
+  }
+}

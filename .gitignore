@@ -1,0 +1,72 @@
+# 环境变量和密钥
+.env
+.env.local
+.env.*.local
+
+# 加密配置文件
+encrypted_config.key
+config_key.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# 虚拟环境
+venv/
+env/
+ENV/
+.conda/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 日志文件
+*.log
+logs/
+
+# 上传和生成的文件
+uploads/*
+!uploads/.gitkeep
+generated/*
+!generated/.gitkeep
+static/thumbnails/*
+!static/thumbnails/.gitkeep
+
+# 备份文件
+*.bak
+*.backup
+backup*
+*.rar
+*.zip
+
+# 临时文件
+*.tmp
+.DS_Store
+Thumbs.db
+nul
+
+# Windows
+desktop.ini
+node_modules/
+
+# 系统配置（可选，根据需要调整）
+# server_config.json
+
+# uv environment
+.venv/
+
+# 业务数据文件
+*.pptx
+*.ppt
+*.docx
+*.pdf

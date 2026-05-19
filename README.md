@@ -7,9 +7,9 @@ PPT Narrator AI is a powerful web application designed to automatically generate
 - **Automated Script Generation:** Upload any `.pptx` file and the AI will analyze the content to generate comprehensive speaker notes for each slide.
 - **Two-Stage Generation Architecture:** Uses an advanced two-stage prompt engineering approach (Analysis -> Generation) for higher quality and contextual consistency.
 - **Multi-Model Support:** Seamlessly integrates with multiple LLM providers:
-  - Local Models (Ollama - Gemma 2)
+  - Local Models (Ollama /vllm gemma 4)
   - Google Gemini
-  - DeepSeek
+  - glm -4v
   - Alibaba Qwen
 - **Real-time Monitoring:** Includes a dedicated PowerShell-based color-coded log monitoring console to track background tasks, API performance, and frontend interactions.
 - **Robust Background Service:** Runs reliably as a background service managed by Windows batch scripts.
